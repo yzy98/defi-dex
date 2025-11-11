@@ -71,7 +71,4 @@ artifacts/
 typechain/
 typechain-types/
 
-# Foundry
-lib/
-cache_forge/
 
