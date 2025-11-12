@@ -123,16 +123,32 @@ export const dexAbi = [
     "type": "event"
   },
   {
-    "inputs": [],
-    "name": "currentPrice",
-    "outputs": [
+    "inputs": [
       {
         "internalType": "uint256",
-        "name": "_currentPrice",
+        "name": "yOutput",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "xReserves",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "yReserves",
         "type": "uint256"
       }
     ],
-    "stateMutability": "view",
+    "name": "calculateXInput",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "xInput",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "pure",
     "type": "function"
   },
   {

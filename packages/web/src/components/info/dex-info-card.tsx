@@ -1,13 +1,20 @@
 "use client";
 
 import { ArrowDownIcon, SendHorizonalIcon } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { formatEther, parseEther } from "viem";
-import { useBalance, useReadContract, useWriteContract } from "wagmi";
+import {
+	useBalance,
+	useConfig,
+	useReadContract,
+	useWriteContract,
+} from "wagmi";
+import { readContract } from "wagmi/actions";
 import { balloonAbi } from "@/abis/balloon";
 import { dexAbi } from "@/abis/dex";
 import { CryptoAddress } from "@/components/global/crypto-address";
+import { Curve } from "@/components/global/curve";
 import {
 	Card,
 	CardContent,
@@ -31,6 +38,10 @@ export const DexInfoCard = () => {
 	const [buyAmount, setBuyAmount] = useState("");
 	const [depositAmount, setDepositAmount] = useState("");
 	const [withdrawAmount, setWithdrawAmount] = useState("");
+	const [isCalculating, setIsCalculating] = useState(false);
+
+	const config = useConfig();
+	const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
 	const { data: dexETHBalance } = useBalance({
 		address: DEX_CONTRACT_ADDRESS,
@@ -43,49 +54,184 @@ export const DexInfoCard = () => {
 		args: [DEX_CONTRACT_ADDRESS],
 	});
 
-	const { data: currentPrice } = useReadContract({
-		abi: dexAbi,
-		address: DEX_CONTRACT_ADDRESS,
-		functionName: "currentPrice",
-	});
-
 	const { data: totalLiquidity } = useReadContract({
 		abi: dexAbi,
 		address: DEX_CONTRACT_ADDRESS,
 		functionName: "totalLiquidity",
 	});
 
-	const ethToToken = (ethAmount: string) =>
-		(
-			Number(ethAmount) * Number(formatEther(currentPrice ?? BigInt(0)))
-		).toFixed(8);
+	const ethToToken = useCallback(
+		async (ethAmount: string) => {
+			if (!dexETHBalance?.value || !dexBalloonBalance || !ethAmount) {
+				return "";
+			}
 
-	const tokenToEth = (tokenAmount: string) =>
-		(
-			Number(tokenAmount) / Number(formatEther(currentPrice ?? BigInt(0)))
-		).toFixed(8);
+			try {
+				const tokenOutput = await readContract(config, {
+					abi: dexAbi,
+					address: DEX_CONTRACT_ADDRESS,
+					functionName: "price",
+					args: [parseEther(ethAmount), dexETHBalance.value, dexBalloonBalance],
+				});
 
-	const handleChangeInput = (isSell: boolean, newAmount: string) => {
-		if (newAmount === "") {
-			setSellAmount("");
-			setBuyAmount("");
-			return;
-		}
+				return formatEther(tokenOutput);
+			} catch (error) {
+				console.error("Error calculating token output:", error);
+				return "";
+			}
+		},
+		[config, dexETHBalance?.value, dexBalloonBalance],
+	);
 
-		if (isSell) {
-			// For sell input update
-			setSellAmount(newAmount);
-			const newBuyAmount =
-				sellToken === "ETH" ? ethToToken(newAmount) : tokenToEth(newAmount);
-			setBuyAmount(newBuyAmount);
-		} else {
-			// For buy input update
-			setBuyAmount(newAmount);
-			const newSellAmount =
-				sellToken === "BAL" ? ethToToken(newAmount) : tokenToEth(newAmount);
-			setSellAmount(newSellAmount);
-		}
-	};
+	const tokenToEth = useCallback(
+		async (tokenAmount: string) => {
+			if (!dexETHBalance?.value || !dexBalloonBalance || !tokenAmount) {
+				return "";
+			}
+
+			try {
+				const ethOutput = await readContract(config, {
+					abi: dexAbi,
+					address: DEX_CONTRACT_ADDRESS,
+					functionName: "price",
+					args: [
+						parseEther(tokenAmount),
+						dexBalloonBalance,
+						dexETHBalance.value,
+					],
+				});
+
+				return formatEther(ethOutput);
+			} catch (error) {
+				console.error("Error calculating ETH output:", error);
+				return "";
+			}
+		},
+		[config, dexETHBalance?.value, dexBalloonBalance],
+	);
+
+	const getRequiredEthFromToken = useCallback(
+		async (tokenAmount: string) => {
+			if (!dexETHBalance?.value || !dexBalloonBalance || !tokenAmount) {
+				return "";
+			}
+
+			try {
+				const requiredEth = await readContract(config, {
+					abi: dexAbi,
+					address: DEX_CONTRACT_ADDRESS,
+					functionName: "calculateXInput",
+					args: [
+						parseEther(tokenAmount),
+						dexETHBalance.value,
+						dexBalloonBalance,
+					],
+				});
+
+				return formatEther(requiredEth);
+			} catch (error) {
+				console.error("Error calculating required ETH:", error);
+				return "";
+			}
+		},
+		[config, dexETHBalance?.value, dexBalloonBalance],
+	);
+
+	const getRequiredTokenFromEth = useCallback(
+		async (ethAmount: string) => {
+			if (!dexETHBalance?.value || !dexBalloonBalance || !ethAmount) {
+				return "";
+			}
+
+			try {
+				const requiredToken = await readContract(config, {
+					abi: dexAbi,
+					address: DEX_CONTRACT_ADDRESS,
+					functionName: "calculateXInput",
+					args: [parseEther(ethAmount), dexBalloonBalance, dexETHBalance.value],
+				});
+
+				return formatEther(requiredToken);
+			} catch (error) {
+				console.error("Error calculating required Token:", error);
+				return "";
+			}
+		},
+		[config, dexETHBalance?.value, dexBalloonBalance],
+	);
+
+	const handleChangeInput = useCallback(
+		(isSell: boolean, newAmount: string) => {
+			// Clear previous timer
+			if (debounceTimerRef.current) {
+				clearTimeout(debounceTimerRef.current);
+			}
+
+			if (newAmount === "") {
+				setSellAmount("");
+				setBuyAmount("");
+				setIsCalculating(false);
+				return;
+			}
+
+			if (isSell) {
+				// Update sell amount immediately for responsive UI
+				setSellAmount(newAmount);
+				setIsCalculating(true);
+
+				// Debounce the async calculation
+				debounceTimerRef.current = setTimeout(async () => {
+					try {
+						const newBuyAmount =
+							sellToken === "ETH"
+								? await ethToToken(newAmount)
+								: await tokenToEth(newAmount);
+						setBuyAmount(newBuyAmount);
+					} catch (error) {
+						console.error("Error calculating buy amount:", error);
+						setBuyAmount("0");
+					} finally {
+						setIsCalculating(false);
+					}
+				}, 300); // Wait 300ms after user stops typing
+			} else {
+				// Update buy amount immediately
+				setBuyAmount(newAmount);
+				setIsCalculating(true);
+
+				debounceTimerRef.current = setTimeout(async () => {
+					try {
+						const newSellAmount =
+							sellToken === "ETH"
+								? await getRequiredEthFromToken(newAmount)
+								: await getRequiredTokenFromEth(newAmount);
+						setSellAmount(newSellAmount);
+					} catch (error) {
+						console.error("Error calculating sell amount:", error);
+						setSellAmount("0");
+					} finally {
+						setIsCalculating(false);
+					}
+				}, 300);
+			}
+		},
+		[
+			sellToken,
+			ethToToken,
+			tokenToEth,
+			getRequiredEthFromToken,
+			getRequiredTokenFromEth,
+		],
+	);
+
+	// Cleanup on unmount
+	useEffect(() => {
+		return () => {
+			if (debounceTimerRef.current) {
+				clearTimeout(debounceTimerRef.current);
+			}
+		};
+	}, []);
 
 	const handleChangeSellToken = () => {
 		setSellToken(sellToken === "BAL" ? "ETH" : "BAL");
@@ -241,7 +387,9 @@ export const DexInfoCard = () => {
 							className="w-[340px]"
 							value={sellAmount}
 							onChange={(e) => handleChangeInput(true, e.target.value)}
-							placeholder={`Sell ${sellToken}`}
+							placeholder={
+								isCalculating ? "Calculating..." : `Sell ${sellToken}`
+							}
 							disabled={isWritingContract}
 						/>
 						<span className="text-sm font-bold">{sellToken}</span>
@@ -261,7 +409,11 @@ export const DexInfoCard = () => {
 							className="w-[340px]"
 							value={buyAmount}
 							onChange={(e) => handleChangeInput(false, e.target.value)}
-							placeholder={`Buy ${sellToken === "ETH" ? "BAL" : "ETH"}`}
+							placeholder={
+								isCalculating
+									? "Calculating..."
+									: `Buy ${sellToken === "ETH" ? "BAL" : "ETH"}`
+							}
 							disabled={isWritingContract}
 						/>
 						<span className="text-sm font-bold">
@@ -333,6 +485,24 @@ export const DexInfoCard = () => {
 						</Button>
 					</div>
 				</div>
+				<Curve
+					addingEth={
+						sellToken === "ETH" && sellAmount !== ""
+							? parseFloat(sellAmount)
+							: 0
+					}
+					addingToken={
+						sellToken === "BAL" && sellAmount !== ""
+							? parseFloat(sellAmount)
+							: 0
+					}
+					ethReserve={parseFloat(
+						formatEther(dexETHBalance?.value ?? BigInt(0)),
+					)}
+					tokenReserve={parseFloat(formatEther(dexBalloonBalance ?? BigInt(0)))}
+					width={500}
+					height={500}
+				/>
 			</CardContent>
 		</Card>
 	);

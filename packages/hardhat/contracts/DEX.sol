@@ -85,12 +85,23 @@ contract DEX {
   }
 
   /**
-   * @notice Returns the current price of the token in ETH
-   * @return _currentPrice The current price of the token in ETH : xx BAL / ETH
+   * xReserves * yReserves = (xReserves + xInput) * (yReserves - yOutput)
+   * xReserves + xInput = (xReserves * yReserves) / (yReserves - yOutput)
+   * xInput = (xReserves * yReserves) / (yReserves - yOutput) - xReserves
+   * xInput = ((xReserves * yReserves) - (xReserves * (yReserves - yOutput))) / (yReserves - yOutput)
+   * xInput = (xReserves * yOutput) / (yReserves - yOutput)
    */
-  function currentPrice() public view returns (uint256 _currentPrice) {
-    _currentPrice = price(1 ether, address(this).balance, token.balanceOf(address(this)));
-    return _currentPrice;
+  function calculateXInput(
+    uint256 yOutput,
+    uint256 xReserves,
+    uint256 yReserves
+  ) public pure returns (uint256 xInput) {
+    require(yOutput < yReserves, "Insufficient output reserves");
+  
+    uint256 numerator = yOutput * xReserves * FEE_DECIMAL;
+    uint256 denominator = (yReserves - yOutput) * FEE_PERCENT;
+    
+    return (numerator / denominator) + 1; // +1 to account for rounding errors
   }
 
   /**
@@ -104,7 +115,7 @@ contract DEX {
     // Calculate yOutput (tokenOutput)
     uint256 ethReserves = address(this).balance - msg.value;
     uint256 tokenReserves = token.balanceOf(address(this));
-    tokenOutput =  price(msg.value, ethReserves, tokenReserves);
+    tokenOutput = price(msg.value, ethReserves, tokenReserves);
 
     // Transfer the tokens to the caller
     require(token.transfer(msg.sender, tokenOutput), "ethToToken(): reverted swap.");
