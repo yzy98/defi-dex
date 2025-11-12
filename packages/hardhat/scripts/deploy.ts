@@ -47,13 +47,13 @@ async function main() {
 	await balloon.write.transfer([deployer.account.address, parseEther("10")]);
 	console.log("10 BAL transferred to the deployer's address");
 
-	// Approve the DEX contract to spend the BAL tokens less than 100 BAL
+	// Approve the DEX contract to spend the BAL tokens 5 BAL for initializing the DEX contract
 	console.log(
-		"Approving the DEX contract to spend the BAL tokens less than 100 BAL...",
+		"Approving the DEX contract to spend the BAL tokens 5 BAL for initializing the DEX contract...",
 	);
-	await balloon.write.approve([dex.address, parseEther("100")]);
+	await balloon.write.approve([dex.address, parseEther("5")]);
 	console.log(
-		"DEX contract approved to spend the BAL tokens less than 100 BAL",
+		"DEX contract approved to spend the BAL tokens 5 BAL for initializing the DEX contract",
 	);
 
 	// Init the DEX contract with 5 BAL and 5 ETH

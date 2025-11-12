@@ -85,6 +85,15 @@ contract DEX {
   }
 
   /**
+   * @notice Returns the current price of the token in ETH
+   * @return _currentPrice The current price of the token in ETH : xx BAL / ETH
+   */
+  function currentPrice() public view returns (uint256 _currentPrice) {
+    _currentPrice = price(1 ether, address(this).balance, token.balanceOf(address(this)));
+    return _currentPrice;
+  }
+
+  /**
    * @notice Swaps ETH for tokens
    * @return tokenOutput The amount of tokens output
    */
