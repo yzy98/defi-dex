@@ -351,138 +351,142 @@ export const DexInfoCard = () => {
 	};
 
 	return (
-		<Card className="w-sm md:w-xl">
+		<Card className="w-sm md:w-[1000px]">
 			<CardHeader>
 				<CardTitle>DEX Contract</CardTitle>
 				<CardDescription>
 					<CryptoAddress address={DEX_CONTRACT_ADDRESS} />
 				</CardDescription>
 			</CardHeader>
-			<CardContent className="flex flex-col gap-4">
-				<Separator />
-				<div className="flex flex-col gap-2 items-center">
-					<div className="flex items-center gap-8">
+			<CardContent className="flex flex-col md:flex-row justify-between">
+				<div className="flex flex-col gap-8">
+					<Separator />
+					<div className="flex flex-col gap-2 items-center">
+						<div className="flex items-center gap-8">
+							<div className="flex items-center gap-2">
+								<span>💰💰💰</span>
+								{dexETHBalance?.value ? (
+									<span>
+										{Number(formatEther(dexETHBalance.value)).toFixed(4)}
+									</span>
+								) : (
+									<Skeleton className="w-16 h-4" />
+								)}
+							</div>
+							<div className="flex items-center gap-2">
+								<span>🎈🎈🎈</span>
+								{dexBalloonBalance ? (
+									<span>
+										{Number(formatEther(dexBalloonBalance)).toFixed(4)}
+									</span>
+								) : (
+									<Skeleton className="w-16 h-4" />
+								)}
+							</div>
+						</div>
 						<div className="flex items-center gap-2">
-							<span>💰💰💰</span>
-							{dexETHBalance?.value ? (
-								<span>
-									{Number(formatEther(dexETHBalance.value)).toFixed(4)}
-								</span>
+							<Input
+								type="text"
+								className="w-[340px]"
+								value={sellAmount}
+								onChange={(e) => handleChangeInput(true, e.target.value)}
+								placeholder={
+									isCalculating ? "Calculating..." : `Sell ${sellToken}`
+								}
+								disabled={isWritingContract}
+							/>
+							<span className="text-sm font-bold">{sellToken}</span>
+						</div>
+						<Button
+							type="button"
+							size="icon"
+							className="rounded-full"
+							onClick={handleChangeSellToken}
+							disabled={isWritingContract}
+						>
+							<ArrowDownIcon className="size-3" />
+						</Button>
+						<div className="flex items-center gap-2">
+							<Input
+								type="text"
+								className="w-[340px]"
+								value={buyAmount}
+								onChange={(e) => handleChangeInput(false, e.target.value)}
+								placeholder={
+									isCalculating
+										? "Calculating..."
+										: `Buy ${sellToken === "ETH" ? "BAL" : "ETH"}`
+								}
+								disabled={isWritingContract}
+							/>
+							<span className="text-sm font-bold">
+								{sellToken === "ETH" ? "BAL" : "ETH"}
+							</span>
+						</div>
+						<div className="flex items-center gap-2">
+							<Button
+								type="button"
+								variant="outline"
+								onClick={handleResetInputs}
+								disabled={isWritingContract}
+							>
+								Reset
+							</Button>
+							<Button
+								type="button"
+								onClick={handleSwap}
+								disabled={isWritingContract}
+							>
+								Swap
+							</Button>
+						</div>
+					</div>
+					<Separator />
+					<div className="flex flex-col gap-2 items-center">
+						<div className="flex items-center gap-2">
+							<span>💦💦💦</span>
+							{totalLiquidity ? (
+								<span>{Number(formatEther(totalLiquidity)).toFixed(4)}</span>
 							) : (
 								<Skeleton className="w-16 h-4" />
 							)}
 						</div>
 						<div className="flex items-center gap-2">
-							<span>🎈🎈🎈</span>
-							{dexBalloonBalance ? (
-								<span>{Number(formatEther(dexBalloonBalance)).toFixed(4)}</span>
-							) : (
-								<Skeleton className="w-16 h-4" />
-							)}
+							<Input
+								type="text"
+								className="w-[340px]"
+								value={depositAmount}
+								onChange={(e) => setDepositAmount(e.target.value)}
+								placeholder="Deposit liquidity by entering ETH amount"
+								disabled={isWritingContract}
+							/>
+							<Button
+								type="button"
+								size="icon"
+								onClick={handleDepositLiquidity}
+								disabled={isWritingContract}
+							>
+								<SendHorizonalIcon className="size-3" />
+							</Button>
 						</div>
-					</div>
-					<div className="flex items-center gap-2">
-						<Input
-							type="text"
-							className="w-[340px]"
-							value={sellAmount}
-							onChange={(e) => handleChangeInput(true, e.target.value)}
-							placeholder={
-								isCalculating ? "Calculating..." : `Sell ${sellToken}`
-							}
-							disabled={isWritingContract}
-						/>
-						<span className="text-sm font-bold">{sellToken}</span>
-					</div>
-					<Button
-						type="button"
-						size="icon"
-						className="rounded-full"
-						onClick={handleChangeSellToken}
-						disabled={isWritingContract}
-					>
-						<ArrowDownIcon className="size-3" />
-					</Button>
-					<div className="flex items-center gap-2">
-						<Input
-							type="text"
-							className="w-[340px]"
-							value={buyAmount}
-							onChange={(e) => handleChangeInput(false, e.target.value)}
-							placeholder={
-								isCalculating
-									? "Calculating..."
-									: `Buy ${sellToken === "ETH" ? "BAL" : "ETH"}`
-							}
-							disabled={isWritingContract}
-						/>
-						<span className="text-sm font-bold">
-							{sellToken === "ETH" ? "BAL" : "ETH"}
-						</span>
-					</div>
-					<div className="flex items-center gap-2">
-						<Button
-							type="button"
-							variant="outline"
-							onClick={handleResetInputs}
-							disabled={isWritingContract}
-						>
-							Reset
-						</Button>
-						<Button
-							type="button"
-							onClick={handleSwap}
-							disabled={isWritingContract}
-						>
-							Swap
-						</Button>
-					</div>
-				</div>
-				<Separator />
-				<div className="flex flex-col gap-2 items-center">
-					<div className="flex items-center gap-2">
-						<span>💦💦💦</span>
-						{totalLiquidity ? (
-							<span>{Number(formatEther(totalLiquidity)).toFixed(4)}</span>
-						) : (
-							<Skeleton className="w-16 h-4" />
-						)}
-					</div>
-					<div className="flex items-center gap-2">
-						<Input
-							type="text"
-							className="w-[340px]"
-							value={depositAmount}
-							onChange={(e) => setDepositAmount(e.target.value)}
-							placeholder="Deposit liquidity by entering ETH amount"
-							disabled={isWritingContract}
-						/>
-						<Button
-							type="button"
-							size="icon"
-							onClick={handleDepositLiquidity}
-							disabled={isWritingContract}
-						>
-							<SendHorizonalIcon className="size-3" />
-						</Button>
-					</div>
-					<div className="flex items-center gap-2">
-						<Input
-							type="text"
-							className="w-[340px]"
-							value={withdrawAmount}
-							onChange={(e) => setWithdrawAmount(e.target.value)}
-							placeholder="Withdraw liquidity by entering LPT amount"
-							disabled={isWritingContract}
-						/>
-						<Button
-							type="button"
-							size="icon"
-							onClick={handleWithdrawLiquidity}
-							disabled={isWritingContract}
-						>
-							<SendHorizonalIcon className="size-3" />
-						</Button>
+						<div className="flex items-center gap-2">
+							<Input
+								type="text"
+								className="w-[340px]"
+								value={withdrawAmount}
+								onChange={(e) => setWithdrawAmount(e.target.value)}
+								placeholder="Withdraw liquidity by entering LPT amount"
+								disabled={isWritingContract}
+							/>
+							<Button
+								type="button"
+								size="icon"
+								onClick={handleWithdrawLiquidity}
+								disabled={isWritingContract}
+							>
+								<SendHorizonalIcon className="size-3" />
+							</Button>
+						</div>
 					</div>
 				</div>
 				<Curve
@@ -500,8 +504,8 @@ export const DexInfoCard = () => {
 						formatEther(dexETHBalance?.value ?? BigInt(0)),
 					)}
 					tokenReserve={parseFloat(formatEther(dexBalloonBalance ?? BigInt(0)))}
-					width={500}
-					height={500}
+					width={400}
+					height={400}
 				/>
 			</CardContent>
 		</Card>
