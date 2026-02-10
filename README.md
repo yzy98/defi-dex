@@ -1,6 +1,6 @@
 # DeFi DEX - Decentralized Exchange
 
-A full-stack decentralized exchange (DEX) application implementing an Automated Market Maker (AMM) protocol with constant product formula, liquidity provision, and token swapping capabilities.
+A DeFi DEX application implementing an Automated Market Maker (AMM) protocol with constant product formula, liquidity provision, and token swapping capabilities, inspired by [speedrunethereum](https://speedrunethereum.com/challenge/dex).
 
 ## Concept and Explanation
 
